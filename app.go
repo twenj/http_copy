@@ -19,10 +19,14 @@ type URLParser interface {
 	Parse(val map[string][]string, body interface{}, tag string) error
 }
 
+type DefaultURLParser struct {}
+
 type BodyParser interface {
 	MaxBytes() int64
 	Parse(buf []byte, body interface{}, mediaType, charset string) error
 }
+
+type DefaultBodyParser int64
 
 type HTTPError interface {
 	Error() string
@@ -35,8 +39,8 @@ type App struct {
 
 	keys []string
 	renderer Renderer
-	bodyParse BodyParser
-	urlParse URLParser
+	bodyParser BodyParser
+	urlParser URLParser
 	compress Compressible
 	timeout time.Duration
 	serverName string
@@ -58,9 +62,10 @@ func New() *App {
 	}
 	app.Set(SetEnv, env)
 	app.Set(SetServerName, "Gear/" + Version)
-	app.Set(SetEnv, env)
-	app.Set(SetEnv, env)
-	app.Set(SetEnv, env)
+	app.Set(SetBodyParse, DefaultBodyParser(2 << 20))	//2MB
+	app.Set(SetURLParser, DefaultURLParser{})
+	app.Set(SetLogger, log.New(os.Stderr, "", log.LstdFlags))
+	return app
 }
 
 type appSetting uint8
@@ -88,3 +93,77 @@ const (
 
 	SetServerName
 )
+
+func (app *App) Set(key, val interface{}) {
+	if k, ok := key.(appSetting); ok {
+		switch key {
+		case SetBodyParse:
+			if bodyParser, ok := val.(BodyParser); !ok {
+				panic(Err.WithMsg("SetBodyParse setting must implemented gear.BodyParser interface"))
+			} else {
+				app.bodyParser = bodyParser
+			}
+		case SetURLParser:
+			if urlParser, ok := val.(URLParser); !ok {
+				panic(Err.WithMsg("SetURLParser setting must implemented gear.URLParser interface"))
+			} else {
+				app.urlParser = urlParser
+			}
+		case SetCompress:
+			if compress, ok := val.(Compressible); !ok {
+				panic(Err.WithMsg("SetCompress setting must implemented gear.Compressible interface"))
+			} else {
+				app.compress = compress
+			}
+		case SetKeys:
+			if keys, ok := val.([]string); !ok {
+				panic(Err.WithMsg("SetKeys setting must be []string"))
+			} else {
+				app.keys = keys
+			}
+		case SetLogger:
+			if logger, ok := val.(*log.Logger); !ok {
+				panic(Err.WithMsg("SetLogger setting must be *log.Logger instance"))
+			} else {
+				app.logger = logger
+			}
+		case SetOnError:
+			if onerror, ok := val.(func(ctx *Context, err HTTPError)); !ok {
+				panic(Err.WithMsg("SetOnError setting must be func(ctx *Context, err *Error)"))
+			} else {
+				app.onerror = onerror
+			}
+		case SetRenderer:
+			if renderer, ok := val.(Renderer); !ok {
+				panic(Err.WithMsg("SetRenderer setting must be gear.Renderer interface"))
+			} else {
+				app.renderer = renderer
+			}
+		case SetTimeout:
+			if timeout, ok := val.(time.Duration); !ok {
+				panic(Err.WithMsg("SetTimeout setting must be time.Duration instance"))
+			} else {
+				app.timeout = timeout
+			}
+		case SetWithContext:
+			if withContext, ok := val.(func(*http.Request) context.Context); !ok {
+				panic(Err.WithMsg("SetWithContext setting must be func(*http.Request) context.Context"))
+			} else {
+				app.withContext = withContext
+			}
+		case SetEnv:
+			if _, ok := val.(string); !ok {
+				panic(Err.WithMsg("SetEnv setting must be string"))
+			}
+		case SetServerName:
+			if name, ok := val.(string); !ok {
+				panic(Err.WithMsg("SetServerName setting must be string"))
+			} else {
+				app.serverName = name
+			}
+		}
+		app.settings[k] = val
+		return
+	}
+	app.settings[key] = val
+}
