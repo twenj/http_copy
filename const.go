@@ -2,6 +2,11 @@ package goblog
 
 import "net/http"
 
+// MIME types
+const (
+	MIMEApplicationJSON = "application/json"
+)
+
 // HTTP Header Fields
 const (
 	HeaderUserAgent = "User-Agent"
@@ -14,5 +19,6 @@ const (
 var (
 	Err = &Error{Code: http.StatusInternalServerError, Err: "Error"}
 
+	ErrBadRequest = Err.WithCode(http.StatusBadRequest)
 	ErrInternalServerError = Err.WithCode(http.StatusInternalServerError)
 )

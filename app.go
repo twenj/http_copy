@@ -21,6 +21,19 @@ type URLParser interface {
 
 type DefaultURLParser struct {}
 
+func (d DefaultBodyParser) MaxBytes() int64 {
+	return int64(d)
+}
+
+func (d DefaultBodyParser) Parse(buf []byte, body interface{}, mediaType, charset string) error {
+	if len(buf) == 0 {
+		return ErrBadRequest.WithMsg("request entity empty")
+	}
+	switch mediaType {
+	case MIMEApplicationJSON:
+	}
+}
+
 type BodyParser interface {
 	MaxBytes() int64
 	Parse(buf []byte, body interface{}, mediaType, charset string) error
@@ -63,6 +76,7 @@ func New() *App {
 	app.Set(SetEnv, env)
 	app.Set(SetServerName, "Gear/" + Version)
 	app.Set(SetBodyParse, DefaultBodyParser(2 << 20))	//2MB
+	return app
 	app.Set(SetURLParser, DefaultURLParser{})
 	app.Set(SetLogger, log.New(os.Stderr, "", log.LstdFlags))
 	return app

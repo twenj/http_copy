@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"strconv"
+	"bytes"
 )
 
 var crlfEscaper = strings.NewReplacer("\r", "\\r", "\n", "\\n")
@@ -21,6 +23,23 @@ func (l Log) Format() (string, error) {
 		return string(res), nil
 	}
 	return "", err
+}
+
+func (l Log) GoString() string {
+	count := len(l)
+	buf := bytes.NewBufferString("Log{")
+	for key, value := range l {
+		if count--; count == 0 {
+			fmt.Fprintf(buf, "%s:%#v}", key, value)
+		} else {
+			fmt.Fprintf(buf, "%s:%#v, ", key, value)
+		}
+	}
+	return buf.String()
+}
+
+func (l Log) String() string {
+	return l.GoString()
 }
 
 type Level uint8
@@ -56,6 +75,15 @@ func Default(devMode ...bool) *Logger {
 
 func developmentConsume(log Log, ctx *goblog.Context) {
 	std.mu.Lock()
+	defer std.mu.Unlock()
+
+	end := time.Now().UTC()
+	FprintWithColor(std.Out, fmt.Sprintf("%s", log["IP"]), ColorGreen)
+	fmt.Fprintf(std.Out, ` - - [%s] "%s %s %s"`, end.Format(std.tf), log["Method"], log["URL"], log["Proto"])
+	status := log["Status"].(int)
+	FprintWithColor(std.Out, strconv.Itoa(status), colorStatus(status))
+	resTime := float64(end.Sub(log["Start"].(time.Time))) / 1e6
+	fmt.Println(std.Out, fmt.Sprintf("%s %.3fms", log["Length"], resTime))
 }
 
 func New(w io.Writer) *Logger {
@@ -82,6 +110,7 @@ func New(w io.Writer) *Logger {
 
 		if str, err := log.Format(); err == nil {
 			logger.Output(end, InfoLevel, str)
+		} else {
 			logger.Output(end, WarningLevel, log.String())
 		}
 	}
@@ -134,4 +163,23 @@ func (l *Logger) SetLogFormat(logFormat string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.lf = logFormat
+}
+
+func (l *Logger) SetLogConsume(fn func(Log, *goblog.Context)) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.consume = fn
+}
+
+func colorStatus(code int) ColorType {
+	switch {
+	case code >= 200 && code < 300:
+		return ColorGreen
+	case code >= 300 && code < 400:
+		return ColorCyan
+	case code >= 400 && code < 500:
+		return ColorYellow
+	default:
+		return ColorRed
+	}
 }
