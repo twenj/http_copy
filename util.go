@@ -36,6 +36,10 @@ func IsNil(val interface{}) bool {
 	}
 }
 
+func (err *Error) Error() string {
+	return fmt.Sprint("%s: %s", err.Err, err.Msg)
+}
+
 func (err Error) String() string {
 	return err.GoString()
 }

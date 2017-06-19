@@ -2,10 +2,10 @@ package goblog
 
 import "testing"
 
-func TestDivision(t *testing.T) {
-	if i, e := Division(6, 2); i != 3 || e != nil {
-		t.Error("除法函数测试没通过")
-	} else {
-		t.Log("第一个测试通过了")
-	}
+func TestError_From(t *testing.T) {
+	var err Error
+	err = Error{}
+	var e error
+	e = nil
+	err.From(e)
 }
