@@ -2,11 +2,11 @@ package main
 
 import (
 	"goblog"
+	"goblog/logging"
 )
 
 func main() {
-	goblog.New()
+	app := goblog.New()
 	// Add logging middleware
-	//logging.Default(true)
-	//app.UseHandler(logging.Default(true))
+	app.UseHandler(logging.Default(true))
 }

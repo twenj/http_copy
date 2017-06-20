@@ -171,6 +171,26 @@ func (l *Logger) SetLogConsume(fn func(Log, *goblog.Context)) {
 	l.consume = fn
 }
 
+func (l *Logger) FromCtx(ctx *goblog.Context) Log {
+	any, _ := ctx.Any(l)
+	return any.(Log)
+}
+
+func (l *Logger) Serve(ctx *goblog.Context) error {
+	log := l.FromCtx(ctx)
+	// Add a "end book" to flush logs
+	ctx.OnEnd(func() {
+		//Ignore empty log
+		if len(log) == 0 {
+			return
+		}
+		log["Status"] = ctx.Res.Status()
+		log["Length"] = len(ctx.Res.Body())
+		l.consume(log, ctx)
+	})
+	return nil
+}
+
 func colorStatus(code int) ColorType {
 	switch {
 	case code >= 200 && code < 300:

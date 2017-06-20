@@ -7,9 +7,16 @@ import (
 	"log"
 	"context"
 	"os"
+	"encoding/json"
+	"encoding/xml"
+	"net/url"
 )
 
 type Middlewares func(ctx *Context) error
+
+type Handler interface {
+	Serve(ctx *Context) error
+}
 
 type Renderer interface {
 	Render(ctx *Context, w io.Writer, name string, data interface{}) error
@@ -21,6 +28,15 @@ type URLParser interface {
 
 type DefaultURLParser struct {}
 
+func (d DefaultURLParser) Parse(val map[string][]string, body interface{}, tag string) error {
+	return ValuesToStruct(val, body, tag)
+}
+
+type BodyParser interface {
+	MaxBytes() int64
+	Parse(buf []byte, body interface{}, mediaType, charset string) error
+}
+
 func (d DefaultBodyParser) MaxBytes() int64 {
 	return int64(d)
 }
@@ -31,12 +47,17 @@ func (d DefaultBodyParser) Parse(buf []byte, body interface{}, mediaType, charse
 	}
 	switch mediaType {
 	case MIMEApplicationJSON:
+		return json.Unmarshal(buf, body)
+	case MIMEApplicationXML:
+		return xml.Unmarshal(buf, body)
+	case MIMEApplicationForm:
+		val, err := url.ParseQuery(string(buf))
+		if err == nil {
+			err = ValuesToStruct(val, body, "form")
+		}
+		return err
 	}
-}
-
-type BodyParser interface {
-	MaxBytes() int64
-	Parse(buf []byte, body interface{}, mediaType, charset string) error
+	return ErrUnsupportedMediaType.WithMsg("unsupported media type")
 }
 
 type DefaultBodyParser int64
@@ -76,10 +97,13 @@ func New() *App {
 	app.Set(SetEnv, env)
 	app.Set(SetServerName, "Gear/" + Version)
 	app.Set(SetBodyParse, DefaultBodyParser(2 << 20))	//2MB
-	return app
 	app.Set(SetURLParser, DefaultURLParser{})
 	app.Set(SetLogger, log.New(os.Stderr, "", log.LstdFlags))
 	return app
+}
+
+func (app *App) UseHandler(h Handler) {
+	app.mds = append(app.mds, h.Serve)
 }
 
 type appSetting uint8

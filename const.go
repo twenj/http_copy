@@ -5,6 +5,8 @@ import "net/http"
 // MIME types
 const (
 	MIMEApplicationJSON = "application/json"
+	MIMEApplicationXML = "application/xml"
+	MIMEApplicationForm = "application/x-www-form-urlencoded"
 )
 
 // HTTP Header Fields
@@ -21,4 +23,5 @@ var (
 
 	ErrBadRequest = Err.WithCode(http.StatusBadRequest)
 	ErrInternalServerError = Err.WithCode(http.StatusInternalServerError)
+	ErrUnsupportedMediaType = Err.WithCode(http.StatusUnsupportedMediaType)
 )

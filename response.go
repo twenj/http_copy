@@ -12,3 +12,11 @@ type Response struct {
 	w 			http.ResponseWriter
 	rw 			http.ResponseWriter
 }
+
+func (r *Response) Status() int {
+	return r.status
+}
+
+func (r *Response) Body() []byte {
+	return r.body
+}
