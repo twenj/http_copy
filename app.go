@@ -12,7 +12,7 @@ import (
 	"net/url"
 )
 
-type Middlewares func(ctx *Context) error
+type Middleware func(ctx *Context) error
 
 type Handler interface {
 	Serve(ctx *Context) error

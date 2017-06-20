@@ -14,7 +14,29 @@ import (
 	"sync/atomic"
 )
 
-type middlewares []Middlewares
+type middlewares []Middleware
+
+func (m middlewares) run(ctx *Context) (err error) {
+	for _, fn := range m {
+		if err = fn(ctx); !IsNil(err) || ctx.Res.ended.isTrue() {
+			return
+		}
+	}
+	return
+}
+
+func Compose(mds ...Middleware) Middleware {
+	switch len(mds) {
+	case 0:
+		return noOp
+	case 1:
+		return mds[0]
+	default:
+		return middlewares(mds).run
+	}
+}
+
+var noOp Middleware = func(ctx *Context) error { return nil }
 
 type atomicBool int32
 
