@@ -1,9 +1,9 @@
 package goblog
 
 import (
-	"github.com/teambition/trie-mux"
 	"net/http"
 	"strings"
+	"github.com/teambition/trie-mux"
 )
 
 type Router struct {
@@ -62,4 +62,75 @@ func (r *Router) Handle(method, pattern string, handlers ...Middleware) {
 
 func (r *Router) Get(pattern string, handlers ...Middleware) {
 	r.Handle(http.MethodHead, pattern, handlers...)
+}
+
+func (r *Router) Otherwise(handlers ...Middleware) {
+	if len(handlers) == 0 {
+		panic(Err.WithMsg("invalid middleware"))
+	}
+	r.otherwise = Compose(handlers...)
+}
+
+func (r *Router) Serve(ctx *Context) error {
+	path := ctx.Path
+	method := ctx.Method
+	var handler Middleware
+
+	if !strings.HasPrefix(path, r.root) && path != r.rt {
+		return nil
+	}
+
+	if path == r.rt {
+		path = "/"
+	} else if l := len(r.rt); l > 0 {
+		path = path[l:]
+	}
+
+	matched := r.trie.Match(path)
+	if matched.Node == nil {
+		//FixedPathRedirect or TrailingSlashRedirect
+		if matched.TSR != "" || matched.FPR != "" {
+			ctx.Req.URL.Path = matched.TSR
+			if matched.FPR != "" {
+				ctx.Req.URL.Path = matched.FPR
+			}
+			if len(r.root) > 1 {
+				ctx.Req.URL.Path = r.root + ctx.Req.URL.Path[1:]
+			}
+
+			code := http.StatusMovedPermanently
+			if method != "GET" {
+				code = http.StatusTemporaryRedirect
+			}
+			ctx.Status(code)
+			return ctx.Redirect(ctx.Req.URL.String())
+		}
+
+		if r.otherwise == nil {
+			return ErrNotImplemented.WithMsgf(`"%s" is not implemented`, ctx.Path)
+		}
+		handler = r.otherwise
+	} else {
+		ok := false
+		if handler, ok = matched.Node.GetHandler(method).(Middleware); !ok {
+			// OPTIONS support
+			if method == http.MethodOptions {
+				ctx.Set(HeaderAllow, matched.Node.GetAllow())
+				return ctx.End(http.StatusNoContent)
+			}
+
+			if r.otherwise == nil {
+				// If no route handler is returned, it's a 405 error
+				ctx.Set(HeaderAllow, matched.Node.GetAllow())
+				return ErrMethodNotAllowed.WithMsgf(`"%s" is not allowed in "%s"`, method, ctx.Path)
+			}
+			handler = r.otherwise
+		}
+	}
+
+	ctx.SetAny(paramsKey, matched.Params)
+	if len(r.mds) > 0 {
+		handler = Compose(r.middleware, handler)
+	}
+	return nil
 }

@@ -5,6 +5,7 @@ import "net/http"
 // MIME types
 const (
 	MIMEApplicationJSON = "application/json"
+	MIMEApplicationJSONCharsetUTF8 = "application/json; charset=utf-8"
 	MIMEApplicationXML = "application/xml"
 	MIMEApplicationForm = "application/x-www-form-urlencoded"
 	MIMETextHTMLCharsetUTF8 = "text/html; charset=utf-8"
@@ -15,6 +16,8 @@ const (
 	HeaderContentType = "Content-Type"
 	HeaderUserAgent = "User-Agent"
 
+	HeaderAllow = "Allow"
+
 	HeaderXForwardedFor = "X-Forwarded-For"
 	HeaderXRealIP = "X-Real-IP"
 )
@@ -24,6 +27,8 @@ var (
 	Err = &Error{Code: http.StatusInternalServerError, Err: "Error"}
 
 	ErrBadRequest = Err.WithCode(http.StatusBadRequest)
-	ErrInternalServerError = Err.WithCode(http.StatusInternalServerError)
+	ErrMethodNotAllowed = Err.WithCode(http.StatusMethodNotAllowed)
 	ErrUnsupportedMediaType = Err.WithCode(http.StatusUnsupportedMediaType)
+	ErrInternalServerError = Err.WithCode(http.StatusInternalServerError)
+	ErrNotImplemented = Err.WithCode(http.StatusNotImplemented)
 )

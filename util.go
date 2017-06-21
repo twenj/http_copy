@@ -346,6 +346,15 @@ func IsStatusCode(status int) bool {
 	}
 }
 
+func isRedirectStatus(status int) bool {
+	switch status {
+	case 300, 301, 302, 303, 305, 307, 308:
+		return true
+	default:
+		return false
+	}
+}
+
 func isEmptyStatus(status int) bool {
 	switch status {
 	case 204, 205, 304:

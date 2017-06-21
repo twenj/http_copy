@@ -7,6 +7,15 @@ import (
 	"context"
 	"net"
 	"strings"
+	"encoding/json"
+)
+
+type contextKey int
+
+const (
+	isContext contextKey = iota
+	isRecursive
+	paramsKey
 )
 
 type Any interface {
@@ -45,6 +54,10 @@ func (ctx *Context) Any(any interface{}) (val interface{}, err error) {
 	return
 }
 
+func (ctx *Context) SetAny(key, val interface{}) {
+	ctx.kv[key] = val
+}
+
 func (ctx *Context) IP() net.IP {
 	ra := ctx.Req.RemoteAddr
 	if ip := ctx.Req.Header.Get(HeaderXForwardedFor); ip != "" {
@@ -64,6 +77,14 @@ func (ctx *Context) Get(key string) string {
 	return ctx.Req.Header.Get(key)
 }
 
+func (ctx *Context) Set(key, value string) {
+	ctx.Res.Set(key, value)
+}
+
+func (ctx *Context) Status(code int) {
+	ctx.Res.status = code
+}
+
 func (ctx *Context) Type(str string) {
 	ctx.Res.Set(HeaderContentType, str)
 }
@@ -71,6 +92,29 @@ func (ctx *Context) Type(str string) {
 func (ctx *Context) HTML(code int, str string) error {
 	ctx.Type(MIMETextHTMLCharsetUTF8)
 	return ctx.End(code, []byte(str))
+}
+
+func (ctx *Context) JSON(code int, val interface{}) error {
+	buf, err := json.Marshal(val)
+	if err != nil {
+		return err
+	}
+	return ctx.JSONBlob(code, buf)
+}
+
+func (ctx *Context) JSONBlob(code int, buf []byte) error {
+	ctx.Type(MIMEApplicationJSONCharsetUTF8)
+	return ctx.End(code, buf)
+}
+
+func (ctx *Context) Redirect(url string) (err error) {
+	if ctx.Res.ended.swapTrue() {
+		if !isRedirectStatus(ctx.Res.status) {
+			ctx.Res.status = http.StatusFound
+		}
+		http.Redirect(ctx.Res, ctx.Req, url, ctx.Res.status)
+	}
+	return
 }
 
 func (ctx *Context) End(code int, buf ...[]byte) (err error) {
