@@ -66,3 +66,10 @@ func (cw *compressWriter) Write(b []byte) (int, error) {
 	}
 	return cw.rw.Write(b)
 }
+
+func (cw *compressWriter) Close() error {
+	if cw.writer != nil {
+		return cw.writer.Close()
+	}
+	return nil
+}

@@ -76,6 +76,14 @@ func NewContext(app *App, w http.ResponseWriter, r *http.Request) *Context {
 	return &ctx
 }
 
+func (ctx *Context) Done() <-chan struct{} {
+	return ctx.ctx.Done()
+}
+
+func (ctx *Context) Err() error {
+	return ctx.ctx.Err()
+}
+
 func (ctx *Context) Any(any interface{}) (val interface{}, err error) {
 	var ok bool
 	if val, ok = ctx.kv[any]; !ok {
@@ -158,6 +166,21 @@ func (ctx *Context) Redirect(url string) (err error) {
 	return
 }
 
+func (ctx *Context) Error(e error) error {
+	ctx.Res.afterHooks = nil	// clear afterHooks when any error
+	ctx.Res.ResetHeader()
+	err := ParseError(e, ctx.Res.status)
+	if err == nil {
+		err = ErrInternalServerError.WithMsg("nil error")
+	}
+	if ctx.app.onerror != nil {
+		ctx.app.onerror(ctx, err)
+	}
+	// try to respond error if 'OnError' does't do it
+	ctx.respondError(err)
+	return nil
+}
+
 func (ctx *Context) End(code int, buf ...[]byte) (err error) {
 	if ctx.Res.ended.swapTrue() {
 		var body []byte
@@ -174,6 +197,22 @@ func (ctx *Context) OnEnd(hook func()) {
 		panic(Err.WithMsg(`can't add "end hook" after middleware process ended`))
 	}
 	ctx.Res.endHooks = append(ctx.Res.endHooks, hook)
+}
+
+func (ctx *Context) respondError(err HTTPError) {
+	if !ctx.Res.wroteHeader.isTrue() {
+		code := err.Status()
+		// we don't need to logging 501, 4xx errors
+		if code == 500 || code > 501 || code < 400 {
+			ctx.app.Error(err)
+		}
+		// try to render error as json
+		ctx.Set(HeaderContentType, MIMEApplicationJSONCharsetUTF8)
+		ctx.Set(HeaderXContentTypeOptions, "nosniff")
+
+		buf, _ := json.Marshal(err)
+		ctx.Res.respond(code, buf)
+	}
 }
 
 func (ctx *Context) handleCompress() (cw *compressWriter) {

@@ -1,6 +1,12 @@
 package goblog
 
-import "net/http"
+import (
+	"net/http"
+	"regexp"
+)
+
+var defaultHeaderFilterReg = regexp.MustCompile(
+	`(?i)^(accept|allow|retry-after|warning|vary|access-control-allow-|x-ratelimit-)`)
 
 type Response struct {
 	status 		int	// response Status Code
@@ -39,6 +45,19 @@ func (r *Response) Vary(field string) {
 			r.Header().Set(HeaderVary, field)
 		} else {
 			r.Header().Add(HeaderVary, field)
+		}
+	}
+}
+
+func (r *Response) ResetHeader(filterReg ...*regexp.Regexp) {
+	reg := defaultHeaderFilterReg
+	if len(filterReg) > 0 {
+		reg = filterReg[0]
+	}
+	header := r.Header()
+	for key := range header {
+		if !reg.MatchString(key) {
+			delete(header, key)
 		}
 	}
 }

@@ -23,6 +23,7 @@ const (
 	HeaderServer = "Server"
 	HeaderVary = "Vary"
 
+	HeaderXContentTypeOptions = "X-Content-Type-Options"
 	HeaderXForwardedFor = "X-Forwarded-For"
 	HeaderXRealIP = "X-Real-IP"
 )
@@ -36,4 +37,5 @@ var (
 	ErrUnsupportedMediaType = Err.WithCode(http.StatusUnsupportedMediaType)
 	ErrInternalServerError = Err.WithCode(http.StatusInternalServerError)
 	ErrNotImplemented = Err.WithCode(http.StatusNotImplemented)
+	ErrGatewayTimeout = Err.WithCode(http.StatusGatewayTimeout)
 )

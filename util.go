@@ -40,13 +40,6 @@ var noOp Middleware = func(ctx *Context) error { return nil }
 
 type atomicBool int32
 
-type Error struct {
-	Code  int          `json:"-"`
-	Err   string       `json:"error"`
-	Msg   string 	   `json:"message"`
-	Data  interface{} `json:"data,omitempty"`
-	Stack string       `json:"-"`
-}
 
 func IsNil(val interface{}) bool {
 	if val == nil {
@@ -60,6 +53,18 @@ func IsNil(val interface{}) bool {
 	default:
 		return false
 	}
+}
+
+type Error struct {
+	Code  int          `json:"-"`
+	Err   string       `json:"error"`
+	Msg   string 	   `json:"message"`
+	Data  interface{} `json:"data,omitempty"`
+	Stack string       `json:"-"`
+}
+
+func (err *Error) Status() int {
+	return err.Code
 }
 
 func (err *Error) Error() string {
@@ -119,6 +124,27 @@ func (err Error) From(e error) *Error {
 		err.Err = http.StatusText(err.Code)
 	}
 	return &err
+}
+
+func ParseError(e error, code ...int) HTTPError {
+	if IsNil(e) {
+		return nil
+	}
+
+	switch v := e.(type) {
+	case HTTPError:
+		return v
+	case *textproto.Error:
+		err := Err.WithCode(v.Code)
+		err.Msg = v.Msg
+		return err
+	default:
+		err := ErrInternalServerError.WithMsg(e.Error())
+		if len(code) > 0 && code[0] > 0 {
+			err = err.WithCode(code[0])
+		}
+		return err
+	}
 }
 
 func ErrorWithStack(val interface{}, skip ...int) *Error {

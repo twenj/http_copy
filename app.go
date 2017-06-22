@@ -223,6 +223,44 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := NewContext(app, w, r)
 
 	if compressWriter := ctx.handleCompress(); compressWriter != nil {
+		defer compressWriter.Close()
+	}
 
+	// recover panic error
+	defer func() {
+		if err := recover(); err != nil && err != http.ErrAbortHandler {
+			ctx.Res.afterHooks = nil
+			ctx.Res.ResetHeader()
+			ctx.respondError(ErrorWithStack(err))
+		}
+	}()
+
+	go func() {
+		<-ctx.Done()
+		ctx.Res.ended.setTrue()
+	}()
+
+	// process app middleware
+	err := app.mds.run(ctx)
+	if ctx.Res.wroteHeader.isTrue() {
+		if !IsNil(err) {
+			app.Error(err)
+		}
+		return
+	}
+
+	// if context canceled abnormally...
+	if e := ctx.Err(); e != nil {
+		if e == context.Canceled {
+			ctx.Res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		err = ErrGatewayTimeout.WithMsg(e.Error())
+	}
+
+	if !IsNil(err) {
+		ctx.Error(err)
+	} else {
+		ctx.Res.WriteHeader(0)
 	}
 }
