@@ -205,3 +205,24 @@ func (app *App) Set(key, val interface{}) {
 	}
 	app.settings[key] = val
 }
+
+func (app *App) Listen(addr string) error {
+	app.Server.Addr = addr
+	app.Server.ErrorLog = app.logger
+	app.Server.Handler = app
+	return app.Server.ListenAndServe()
+}
+
+func (app *App) Error(err error) {
+	if err := ErrorWithStack(err, 4); err != nil {
+		app.logger.Println(err.String())
+	}
+}
+
+func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := NewContext(app, w, r)
+
+	if compressWriter := ctx.handleCompress(); compressWriter != nil {
+
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"net"
 	"strings"
 	"encoding/json"
+	"github.com/go-http-utils/negotiator"
 )
 
 type contextKey int
@@ -37,6 +38,42 @@ type Context struct {
 	_ctx 	  context.Context
 	cancelCtx context.CancelFunc
 	kv 		  map[interface{}]interface{}
+}
+
+func NewContext(app *App, w http.ResponseWriter, r *http.Request) *Context {
+	ctx := Context{
+		app: app,
+		Req: r,
+		Res: &Response{w: w, rw: w},
+
+		Host: r.Host,
+		Method: r.Method,
+		Path: r.URL.Path,
+
+		Cookies: cookie.New(w, r, app.keys...),
+		kv: make(map[interface{}]interface{}),
+	}
+
+	if app.serverName != "" {
+		ctx.Set(HeaderServer, app.serverName)
+	}
+
+	if app.timeout <= 0 {
+		ctx.ctx, ctx.cancelCtx = context.WithCancel(r.Context())
+	} else {
+		ctx.ctx, ctx.cancelCtx = context.WithTimeout(r.Context(), app.timeout)
+	}
+	ctx.ctx = context.WithValue(ctx.ctx, isContext, isContext)
+
+	if app.withContext != nil {
+		ctx._ctx = app.withContext(r.WithContext(ctx.ctx))
+		if ctx._ctx.Value(isContext) == nil {
+			panic(Err.WithMsg("the context is not created from gear.Context"))
+		}
+	} else {
+		ctx._ctx = ctx.ctx
+	}
+	return &ctx
 }
 
 func (ctx *Context) Any(any interface{}) (val interface{}, err error) {
@@ -71,6 +108,10 @@ func (ctx *Context) IP() net.IP {
 		ra = ra[0:index]
 	}
 	return net.ParseIP(strings.TrimSpace(ra))
+}
+
+func (ctx *Context) AcceptEncoding(preferred ...string) string {
+	return negotiator.New(ctx.Req.Header).Language(preferred...)
 }
 
 func (ctx *Context) Get(key string) string {
@@ -133,4 +174,13 @@ func (ctx *Context) OnEnd(hook func()) {
 		panic(Err.WithMsg(`can't add "end hook" after middleware process ended`))
 	}
 	ctx.Res.endHooks = append(ctx.Res.endHooks, hook)
+}
+
+func (ctx *Context) handleCompress() (cw *compressWriter) {
+	if ctx.app.compress != nil && ctx.Method != http.MethodHead && ctx.Method != http.MethodOptions {
+		if cw = newCompress(ctx.Res, ctx.app.compress, ctx.AcceptEncoding("gzip", "deflate")); cw != nil {
+			ctx.Res.rw = cw //override with http.ResponseWriter wrapper.
+		}
+	}
+	return
 }

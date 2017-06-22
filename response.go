@@ -13,6 +13,10 @@ type Response struct {
 	rw 			http.ResponseWriter
 }
 
+func (r *Response) Get(key string) string {
+	return r.Header().Get(key)
+}
+
 func (r *Response) Status() int {
 	return r.status
 }
@@ -23,6 +27,20 @@ func (r *Response) Body() []byte {
 
 func (r *Response) Set(key, value string) {
 	r.Header().Set(key, value)
+}
+
+func (r *Response) Del(key string) {
+	r.Header().Del(key)
+}
+
+func (r *Response) Vary(field string) {
+	if field != "" && r.Get(HeaderVary) != "*" {
+		if field == "*" {
+			r.Header().Set(HeaderVary, field)
+		} else {
+			r.Header().Add(HeaderVary, field)
+		}
+	}
 }
 
 func (r *Response) Header() http.Header {

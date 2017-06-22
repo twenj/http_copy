@@ -13,10 +13,15 @@ const (
 
 // HTTP Header Fields
 const (
+	HeaderAcceptEncoding = "Accept-Encoding"
+	HeaderContentLength = "Content-Length"
 	HeaderContentType = "Content-Type"
 	HeaderUserAgent = "User-Agent"
 
 	HeaderAllow = "Allow"
+	HeaderContentEncoding = "Content-Encoding"
+	HeaderServer = "Server"
+	HeaderVary = "Vary"
 
 	HeaderXForwardedFor = "X-Forwarded-For"
 	HeaderXRealIP = "X-Real-IP"

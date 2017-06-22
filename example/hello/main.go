@@ -30,4 +30,5 @@ func main() {
 		})
 	})
 	app.UseHandler(router)
+	app.Error(app.Listen(":3000"))
 }
