@@ -61,7 +61,7 @@ func (r *Router) Handle(method, pattern string, handlers ...Middleware) {
 }
 
 func (r *Router) Get(pattern string, handlers ...Middleware) {
-	r.Handle(http.MethodHead, pattern, handlers...)
+	r.Handle(http.MethodGet, pattern, handlers...)
 }
 
 func (r *Router) Otherwise(handlers ...Middleware) {
@@ -132,5 +132,5 @@ func (r *Router) Serve(ctx *Context) error {
 	if len(r.mds) > 0 {
 		handler = Compose(r.middleware, handler)
 	}
-	return nil
+	return handler(ctx)
 }
