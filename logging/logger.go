@@ -83,7 +83,7 @@ func developmentConsume(log Log, ctx *goblog.Context) {
 	status := log["Status"].(int)
 	FprintWithColor(std.Out, strconv.Itoa(status), colorStatus(status))
 	resTime := float64(end.Sub(log["Start"].(time.Time))) / 1e6
-	fmt.Println(std.Out, fmt.Sprintf("%s %.3fms", log["Length"], resTime))
+	fmt.Fprintln(std.Out, fmt.Sprintf("%s %.3fms", log["Length"], resTime))
 }
 
 func New(w io.Writer) *Logger {
