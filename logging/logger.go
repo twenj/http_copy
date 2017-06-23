@@ -171,6 +171,12 @@ func (l *Logger) SetLogConsume(fn func(Log, *goblog.Context)) {
 	l.consume = fn
 }
 
+func (l *Logger) New(ctx *goblog.Context) (interface{}, error) {
+	log := Log{}
+	l.init(log, ctx)
+	return log, nil
+}
+
 func (l *Logger) FromCtx(ctx *goblog.Context) Log {
 	any, _ := ctx.Any(l)
 	return any.(Log)

@@ -239,8 +239,6 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		<-ctx.Done()
 		ctx.Res.ended.setTrue()
 	}()
-
-	// process app middleware
 	err := app.mds.run(ctx)
 	if ctx.Res.wroteHeader.isTrue() {
 		if !IsNil(err) {
