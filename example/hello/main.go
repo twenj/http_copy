@@ -20,7 +20,7 @@ func main() {
 	})
 
 	// try: http://127.0.0.1:3000/test?query=hello
-	/*router.Otherwise(func(ctx *goblog.Context) error {
+	router.Otherwise(func(ctx *goblog.Context) error {
 		return ctx.JSON(200, map[string]interface{}{
 			"Host": ctx.Host,
 			"Method": ctx.Method,
@@ -28,7 +28,7 @@ func main() {
 			"URL": ctx.Req.URL.String(),
 			"Headers": ctx.Req.Header,
 		})
-	})*/
+	})
 	app.UseHandler(router)
 	app.Error(app.Listen(":3000"))
 }
