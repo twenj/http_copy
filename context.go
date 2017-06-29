@@ -9,6 +9,8 @@ import (
 	"strings"
 	"encoding/json"
 	"github.com/go-http-utils/negotiator"
+	"io"
+	"bytes"
 )
 
 type contextKey int
@@ -162,6 +164,27 @@ func (ctx *Context) Redirect(url string) (err error) {
 			ctx.Res.status = http.StatusFound
 		}
 		http.Redirect(ctx.Res, ctx.Req, url, ctx.Res.status)
+	}
+	return
+}
+
+func (ctx *Context) Render(code int, name string, data interface{}) (err error) {
+	if ctx.app.renderer == nil {
+		return Err.WithMsg("renderer not registered")
+	}
+	buf := new(bytes.Buffer)
+	if err = ctx.app.renderer.Render(ctx, buf, name, data); err == nil {
+		ctx.Type(MIMETextHTMLCharsetUTF8)
+		return ctx.End(code,buf.Bytes())
+	}
+	return
+}
+
+func (ctx *Context) Stream(code int, contentType string, r io.Reader) (err error) {
+	if ctx.Res.ended.swapTrue() {
+		ctx.Status(code)
+		ctx.Type(contentType)
+		_, err = io.Copy(ctx.Res, r)
 	}
 	return
 }

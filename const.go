@@ -35,6 +35,7 @@ var (
 	ErrBadRequest = Err.WithCode(http.StatusBadRequest)
 	ErrMethodNotAllowed = Err.WithCode(http.StatusMethodNotAllowed)
 	ErrUnsupportedMediaType = Err.WithCode(http.StatusUnsupportedMediaType)
+	ErrNotFound = Err.WithCode(http.StatusNotFound)
 	ErrInternalServerError = Err.WithCode(http.StatusInternalServerError)
 	ErrNotImplemented = Err.WithCode(http.StatusNotImplemented)
 	ErrGatewayTimeout = Err.WithCode(http.StatusGatewayTimeout)
